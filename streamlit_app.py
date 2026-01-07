@@ -82,11 +82,6 @@ with col2:
         <span style='color: #4285F4;'>G</span><span style='color: #EA4335;'>o</span><span style='color: #FBBC05;'>o</span><span style='color: #4285F4;'>g</span><span style='color: #34A853;'>l</span><span style='color: #EA4335;'>e</span>
     </h1>""", unsafe_allow_html=True)
 
-        st.markdown("""
-    <h1 style='text-align: center; font-family: sans-serif;'>
-        <span style='color: #4285F4;'>G</span><span style='color: #EA4335;'>o</span><span style='color: #FBBC05;'>o</span><span style='color: #4285F4;'>g</span><span style='color: #34A853;'>l</span><span style='color: #EA4335;'>e</span>
-    </h1>
-""", unsafe_allow_html=True)
   
         # Zobrazení e-mailu s ikonkou panáčka (jako u Google)
         st.markdown(f"""
