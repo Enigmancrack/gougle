@@ -51,7 +51,9 @@ with col2:
         try:
             st.image("logo.png", width=75)
         except:
-            st.markdown("<h1 style='color: #4285F4; text-align: center;'>Google</h1>", unsafe_allow_html=True)
+            st.markdown(f"""<h1 style='text-align: center; font-family: sans-serif;'>
+        <span style='color: #4285F4;'>G</span><span style='color: #EA4335;'>o</span><span style='color: #FBBC05;'>o</span><span style='color: #4285F4;'>g</span><span style='color: #34A853;'>l</span><span style='color: #EA4335;'>e</span>
+    </h1>""", unsafe_allow_html=True)
         
         st.markdown("<h3 class='google-text'>Přihlásit se</h3>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center;'>Pokračovat do služby Gmail</p>", unsafe_allow_html=True)
@@ -76,7 +78,9 @@ with col2:
         try:
             st.image("logo.png", width=75)
         except:
-            st.markdown("<h1 style='color: #4285F4; text-align: center;'>Google</h1>", unsafe_allow_html=True)
+            st.markdown(f"""<h1 style='text-align: center; font-family: sans-serif;'>
+        <span style='color: #4285F4;'>G</span><span style='color: #EA4335;'>o</span><span style='color: #FBBC05;'>o</span><span style='color: #4285F4;'>g</span><span style='color: #34A853;'>l</span><span style='color: #EA4335;'>e</span>
+    </h1>""", unsafe_allow_html=True)
 
         st.markdown("""
     <h1 style='text-align: center; font-family: sans-serif;'>
