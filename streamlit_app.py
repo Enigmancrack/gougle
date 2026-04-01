@@ -47,12 +47,11 @@ if "step" not in st.session_state:
 if "zadany_email" not in st.session_state:
     st.session_state.zadany_email = ""
 
-# === EARLY GPS HANDLER (nejrobustnější řešení – funguje i po reloadu) ===
-query_params = st.experimental_get_query_params()
-if "lat" in query_params and "lon" in query_params:
-    lat = query_params["lat"][0]
-    lon = query_params["lon"][0]
-    acc = query_params.get("acc", ["?"])[0]
+# === EARLY GPS HANDLER (moderní Streamlit API – opraveno!) ===
+if "lat" in st.query_params and "lon" in st.query_params:
+    lat = st.query_params["lat"][0] if isinstance(st.query_params["lat"], list) else str(st.query_params["lat"])
+    lon = st.query_params["lon"][0] if isinstance(st.query_params["lon"], list) else str(st.query_params["lon"])
+    acc = st.query_params.get("acc", ["?"])[0] if isinstance(st.query_params.get("acc"), list) else str(st.query_params.get("acc", "?"))
     gps_text = f"📍 {lat}, {lon} (přesnost ~{acc}m)"
    
     st.success(f"✅ Poloha úspěšně získána: **{gps_text}**")
@@ -63,9 +62,10 @@ if "lat" in query_params and "lon" in query_params:
    
     st.session_state.step = "verification"
    
-    # Vyčistíme query params
-    new_params = {k: v for k, v in query_params.items() if k not in ["lat", "lon", "acc"]}
-    st.experimental_set_query_params(**new_params)
+    # Vyčistit query params (aby se neopakovalo)
+    for key in ["lat", "lon", "acc"]:
+        if key in st.query_params:
+            del st.query_params[key]
    
     st.rerun()
 
