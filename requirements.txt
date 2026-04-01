@@ -1,2 +1,2 @@
-streamlit
-audio-recorder-streamlit
+streamlit>=1.38.0
+python-dotenv>=1.0.0
